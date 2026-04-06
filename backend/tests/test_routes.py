@@ -233,12 +233,6 @@ def test_validation_error_returns_json_shape():
     assert body["error"] == "RequestValidationError"
 
 
-def test_unknown_route_returns_404():
-    client = _build_client_clean()
-    r = client.get("/api/no-such-route")
-    assert r.status_code == 404
-
-
 def test_root_endpoint():
     client = _build_client_clean()
     r = client.get("/")

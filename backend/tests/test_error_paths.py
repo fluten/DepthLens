@@ -21,7 +21,7 @@ import types
 from fastapi.testclient import TestClient
 
 from app.config import MAX_IMAGE_BYTES
-from app.core.exceptions import ModelLoadError
+from app.core.exceptions import ModelLoadError, ModelNotFoundError
 from app.main import create_app
 from app.services import model_manager
 
@@ -158,6 +158,31 @@ def test_vram_precheck_returns_507_when_insufficient():
         assert factory_called == []
         # current_id 必须 None
         assert model_manager.get_model_manager().current_id is None
+
+
+# ── 5a) DepthLensError 透传 (Bug #3) ──────────────────────
+
+
+def test_factory_raising_depthlens_error_is_not_wrapped_as_502():
+    """工厂抛 ModelNotFoundError (一种 DepthLensError) 时, 应原样透传 → 404,
+    而不是被 ModelManager.load() 的 ``except Exception`` 兜底包装成 502.
+
+    回归保护 Bug #3.
+    """
+
+    def patched_factory_for(entry):
+        # 直接在工厂层抛 ModelNotFoundError, 模拟未来某个 adapter 工厂自身的判断
+        raise ModelNotFoundError("synthetic factory rejection")
+
+    with temp_factory(patched_factory_for):
+        client = TestClient(create_app())
+        r = client.post(
+            "/api/models/load", json={"model_id": "depth-anything-v2-small"}
+        )
+        # 关键: 应该是 404, 不是 502
+        assert r.status_code == 404
+        body = r.json()
+        assert body["error"] == "ModelNotFoundError"
 
 
 # ── 5) 空 bytes upload — image_utils 单一入口 ─────────────

@@ -6,8 +6,9 @@
 设计:
     - 所有 ``DepthLensError`` 统一序列化为 ``{error: ClassName, message: user_message}``
       前端 ``services/api.ts`` 拦截后直接走 Toast.
-    - HTTPException (FastAPI 内置, 例如 422 校验失败) 走 ``http_exception_handler``
-      转成相同结构, 让前端只需要处理一种错误形态.
+    - 注册 ``starlette.exceptions.HTTPException`` (而非 ``fastapi.HTTPException``)
+      的 handler, 这样 Starlette 路由层抛的 404 / 405 也能走统一形态. FastAPI 的
+      HTTPException 是 Starlette 那个的子类, 所以一并被覆盖.
     - 其他未捕获的异常 → 500 + ``"内部错误"`` 兜底, 真实信息进日志.
     - CORS 仅放开 :data:`config.CORS_ORIGINS`, 默认是 Vite dev server.
 """
@@ -16,10 +17,11 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .config import CORS_ORIGINS
 from .core.exceptions import DepthLensError
@@ -119,10 +121,15 @@ def _register_exception_handlers(application: FastAPI) -> None:
             },
         )
 
-    @application.exception_handler(HTTPException)
+    @application.exception_handler(StarletteHTTPException)
     async def _handle_http_exception(
-        _request: Request, exc: HTTPException
+        _request: Request, exc: StarletteHTTPException
     ) -> JSONResponse:
+        # 注册 Starlette 的 HTTPException 而非 FastAPI 的, 这样:
+        # - FastAPI 的 HTTPException (它继承 Starlette 那个) 仍然被覆盖
+        # - Starlette 路由层为未匹配 path / 错方法直接返回的 404 / 405 也走这里
+        # 否则那两种情形会绕过本 handler, 返回默认的 ``{"detail": "..."}``,
+        # 破坏前端 "只处理一种错误形态" 的承诺.
         return JSONResponse(
             status_code=exc.status_code,
             content={

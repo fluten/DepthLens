@@ -47,6 +47,16 @@ class DepthService:
     ) -> DepthResult:
         """完整推理管线: bytes → DepthResult.
 
+        **错误优先级 (有意设计)**:
+            1. ``ImageTooLargeError`` (上传体积上限, O(1) 检查最便宜)
+            2. ``ModelNotLoadedError`` (无模型, 比解码图片更廉价)
+            3. ``InvalidImageError`` / ``UnsupportedFormatError`` (解码失败)
+            4. ``ModelOOMError`` (推理时显存不足)
+
+            **注意**: 没加载模型时, 即便图片本身是坏的也会先返回 ``ModelNotLoadedError``
+            而非 ``InvalidImageError``. 这是有意的 — "请先加载模型" 是更可操作的指引,
+            而且能省掉 PIL 解码的 CPU 开销. 前端 UI 应在拖入图片前先确保模型已加载.
+
         Args:
             image_bytes: HTTP multipart 上传的原始字节
             invert_depth: 是否反转深度方向 (用户偏好, 默认 False)
@@ -56,9 +66,9 @@ class DepthService:
 
         Raises:
             ImageTooLargeError: 字节数超过 :data:`config.MAX_IMAGE_BYTES`
+            ModelNotLoadedError: 当前没有加载模型 (优先级高于 InvalidImageError)
             InvalidImageError: 数据不是有效图像 (含空 bytes, 由 image_utils 抛)
             UnsupportedFormatError: 格式不在白名单 (gif/svg/...)
-            ModelNotLoadedError: 当前没有加载模型
             ModelOOMError: 推理时显存不足 (已自动卸载)
         """
         # 1) 上传体积兜底 (router 层 FastAPI 默认不限制 multipart 体积).

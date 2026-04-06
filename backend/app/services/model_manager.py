@@ -25,6 +25,7 @@ from typing import Any
 from ..adapters.base import DepthEstimator
 from ..config import MODEL_REGISTRY, VRAM_SAFETY_MARGIN_MB, ModelEntry
 from ..core.exceptions import (
+    DepthLensError,
     ModelLoadError,
     ModelNotFoundError,
     ModelNotLoadedError,
@@ -137,14 +138,14 @@ class ModelManager:
                 factory = _factory_for(entry)
                 adapter = factory(entry)
                 adapter.load()
-            except ModelOOMError:
-                # adapter 已自我清理, 这里只更新状态机
+            except DepthLensError:
+                # 任何业务异常 (ModelOOMError / ModelLoadError / ModelNotFoundError /
+                # ...) 原样向上抛, 让全局 handler 用各自的 status_code + user_message
+                # 序列化. 不要在这里包装, 否则 ModelNotFoundError (404) 会被错误地
+                # 当成 ModelLoadError (502).
                 self._status = "error"
                 raise
-            except ModelLoadError:
-                self._status = "error"
-                raise
-            except Exception as exc:  # noqa: BLE001 — 防御: 任何意外都封装
+            except Exception as exc:  # noqa: BLE001 — 兜底: 真正未知的运行时异常
                 self._status = "error"
                 raise ModelLoadError(f"加载 {model_id} 时发生未知错误: {exc}") from exc
 

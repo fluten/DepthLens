@@ -11,7 +11,13 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+# Pydantic v2 默认保留 ``model_`` 前缀作为内部命名空间, 与本项目的 ``model_id``
+# 字段冲突. 在所有用到 ``model_id`` 的 schema 上设置 ``protected_namespaces=()``,
+# 取消该限制. 这是用户明文授权的修改 (Issue #5).
+_ALLOW_MODEL_PREFIX = ConfigDict(protected_namespaces=())
+
 
 # ── 基础类型 ────────────────────────────────────────────────
 
@@ -68,11 +74,15 @@ class ModelInfo(BaseModel):
 class ModelLoadRequest(BaseModel):
     """``POST /api/models/load``."""
 
+    model_config = _ALLOW_MODEL_PREFIX
+
     model_id: str
 
 
 class ModelLoadResponse(BaseModel):
     """``POST /api/models/load`` 响应."""
+
+    model_config = _ALLOW_MODEL_PREFIX
 
     status: ModelStatusLiteral
     model_id: str
@@ -106,6 +116,8 @@ class DepthResult(BaseModel):
     值域 ``[0, 1]``. 数据顺序为 row-major (C order). 前端使用
     ``new Float32Array(buffer)`` 构造.
     """
+
+    model_config = _ALLOW_MODEL_PREFIX
 
     depth_b64: str = Field(..., description="float32 深度图的 base64")
     width: int
