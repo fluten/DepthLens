@@ -54,6 +54,27 @@ def test_config_model_registry_shape():
         assert entry.hf_repo.startswith("depth-anything/")
 
 
+def test_adapter_factories_cover_all_registered_models():
+    """完整性约束: ``MODEL_REGISTRY`` 中每个 model_id 都必须在
+    ``ADAPTER_FACTORIES`` 中有对应工厂, 且不存在多余条目.
+
+    防止以后加新模型时只改了一边, 导致 ``ModelManager.load()`` 在运行时才报错.
+    """
+    from app.config import MODEL_REGISTRY
+    from app.services.model_manager import ADAPTER_FACTORIES, _factory_for
+
+    registry_ids = set(MODEL_REGISTRY.keys())
+    factory_ids = set(ADAPTER_FACTORIES.keys())
+    assert registry_ids == factory_ids, (
+        f"missing in factories: {registry_ids - factory_ids}; "
+        f"extra in factories: {factory_ids - registry_ids}"
+    )
+
+    # 每个 entry 都能成功取到 callable
+    for entry in MODEL_REGISTRY.values():
+        assert callable(_factory_for(entry))
+
+
 # ── adapters/base.py ───────────────────────────────────────
 
 
