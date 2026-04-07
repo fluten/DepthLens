@@ -19,6 +19,9 @@ eggs/
 .eggs/
 lib/
 lib64/
+# 例外: 前端 src/lib 是 React 项目的源码目录, 不能被 Python 的 lib/ 规则误伤
+!frontend/src/lib/
+!frontend/src/lib/**
 parts/
 sdist/
 var/
