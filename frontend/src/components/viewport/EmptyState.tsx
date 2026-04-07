@@ -17,9 +17,15 @@
  *
  * 职责 (component 层 — 纯渲染 + 简单事件绑定):
  *   - 渲染 "拖入图片查看深度" 引导文案 + 三层深度抽象图标
- *   - 底部显示三个键盘快捷键提示 pill
  *   - "打开摄像头" 按钮 → setMode('camera')
+ *   - 上滑箭头暗示 (在 Mode Bar 之上, 提示用户上滑打开 Settings)
  *   - 没有粒子背景 (Phase 2 才做, Phase 1 专注功能)
+ *
+ * **不渲染键盘快捷键提示行**:
+ *   早期版本曾在 fixed bottom-10 渲染过 Space/H/Esc 三个 KeyHint pill, 但
+ *   bottom 40px 直接落在 ModeBar (bottom 0, height 80px) 内部, 与模式标签
+ *   视觉重叠. 修复: 删除 EmptyState 的键盘 hints, 快捷键提示统一在
+ *   SettingsSheet 底部展示 (`Space 关闭 · S 切换 · 1-4 模式`).
  *
  * **z-index**: 这个组件总是被 Viewport 包在 z-0 层内, 不需要自己 fixed
  */
@@ -162,16 +168,15 @@ export function EmptyState() {
       </div>
 
       {/* ── 上滑箭头暗示 (TODO.md "上滑箭头暗示") ──────────────────────
-          位置: Mode Bar (80px) 上方, 脉冲 fade + 浮动.
-          意图: 向用户暗示"从底部可以上滑打开设置".
+          位置: ModeBar (height 80px, bottom 0) 之上 20px, 即 bottom 100px.
+          脉冲 fade + 上下浮动, 暗示"从底部上滑打开设置".
           UX (SPEC §13.2): 静态版本, 不依赖 onboarding storage —
-          onboarding 跟踪是 Phase 4 任务, 这里先让所有会话都显示. */}
+          onboarding 跟踪是 Phase 4 任务, Phase 1 让所有会话都显示. */}
       <motion.div
         className="fixed left-1/2 -translate-x-1/2 pointer-events-none select-none"
-        // 放在 ModeBar (80px high, bottom: 0) 上方 + KeyHint 行 (bottom 40px)
-        // 上方. bottom 140 = 80 (modebar) + 40 (keyhint) + 20 (gap) 左右.
         style={{
-          bottom: '140px',
+          // ModeBar 占 0-80px, 上方 20px 间隙 = 100px
+          bottom: '100px',
           color: 'var(--text-tertiary)',
         }}
         aria-hidden="true"
@@ -187,54 +192,6 @@ export function EmptyState() {
       >
         <ChevronUp size={20} strokeWidth={1.5} />
       </motion.div>
-
-      {/* ── 底部键盘快捷键提示 (3 个 pill) ───────────────────────────── */}
-      <div
-        // fixed + pointer-events-none: 不拦截 drop 事件, 只是视觉提示
-        className="fixed bottom-10 left-1/2 -translate-x-1/2 flex items-center justify-center gap-8 select-none"
-        style={{ pointerEvents: 'none' }}
-        aria-hidden="true"
-      >
-        <KeyHint label="Space" desc="设置" />
-        <KeyHint label="H" desc="HUD" />
-        <KeyHint label="Esc" desc="退出" />
-      </div>
-    </div>
-  )
-}
-
-// ── 子组件: 键盘提示 pill ─────────────────────────────────────────────────
-
-interface KeyHintProps {
-  label: string
-  desc: string
-}
-
-function KeyHint({ label, desc }: KeyHintProps) {
-  return (
-    <div className="flex items-center gap-2">
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 'var(--text-xs)',
-          color: 'var(--text-secondary)',
-          border: '1px solid var(--border)',
-          borderRadius: '4px',
-          padding: '2px 6px',
-          lineHeight: 1,
-        }}
-      >
-        {label}
-      </span>
-      <span
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 'var(--text-xs)',
-          color: 'var(--text-tertiary)',
-        }}
-      >
-        {desc}
-      </span>
     </div>
   )
 }

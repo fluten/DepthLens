@@ -27,7 +27,10 @@ numpy==2.1.2
 opencv-python==4.10.0.84       # Phase 3 视频管线会用, 提前装好
 
 # ── 模型推理 (按需自行装 torch, 见上方说明) ─────────────
-transformers==4.46.0
+# transformers 4.46 不识别 Depth Anything V2 的 preprocessor_config.json
+# 里的 image_processor_type 字段, 加载会抛 "Unrecognized image processor".
+# 5.x 已经原生支持 Depth Anything V2, 验证通过 (CPU/GPU 均可).
+transformers>=5.5,<6
 # torch>=2.2,<3                 # 自行通过 pytorch.org 索引安装
 # torchvision>=0.17,<1
 

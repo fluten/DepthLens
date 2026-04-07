@@ -83,12 +83,18 @@ export function ModeBar() {
       role="tablist"
       aria-label="输入模式"
       onWheel={handleWheel}
-      // 固定底部, 水平居中. 高度 80px, flex 水平排列, 间距 24px.
+      // 固定底部, 水平居中. 高度 80px, flex 水平排列.
       // NO background — 文字直接浮在画面上 (DESIGN.md §2 玻璃分配表).
       // z-modebar = 40 (tailwind config 映射 DESIGN.md §9)
-      className="fixed bottom-0 left-1/2 -translate-x-1/2 z-modebar h-20 flex items-center justify-center gap-6 px-6 select-none"
-      // pointer-events-auto 让滚轮事件能穿透到这个条
-      style={{ pointerEvents: 'auto' }}
+      //
+      // **间距用 inline style 显式 24px** (DESIGN.md §8 "标签间距 24px"):
+      // 不依赖 tailwind 的 gap-* 类, 避免任何 spacing extend 解析歧义.
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 z-modebar h-20 flex items-center justify-center select-none"
+      style={{
+        gap: 'var(--space-6)', // 24px — DESIGN.md §8 标签间距
+        padding: '0 var(--space-6)', // 左右 24px 留呼吸空间
+        pointerEvents: 'auto', // 让滚轮事件能穿透到这个条
+      }}
     >
       {MODES.map((m) => {
         const isActive = m.id === mode
@@ -101,14 +107,18 @@ export function ModeBar() {
             aria-pressed={isActive}
             onClick={() => setMode(m.id)}
             // 纵向弹性容器: label 在上, dot 在下.
-            // relative 让 dot 的 layoutId 能相对于这个 button 定位 (动画 origin).
-            className="relative flex flex-col items-center justify-center cursor-pointer bg-transparent border-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded-sm px-2 py-1"
+            // relative 让 dot 的 layoutId 能相对于这个 button 定位.
+            className="relative flex flex-col items-center justify-center cursor-pointer bg-transparent border-0 outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] rounded-sm"
             style={{
+              // **加大 hit area** (DESIGN.md HCI Fitts: 高频操作给大目标):
+              // 12px 横 + 8px 纵 padding, 让点击区域至少 ~70×40, 避免误点.
+              padding: 'var(--space-2) var(--space-3)',
               fontFamily: 'var(--font-ui)',
-              fontSize: '14px',
+              fontSize: '14px', // DESIGN.md §8 标签字号 14px
               fontWeight: isActive ? 600 : 400,
               color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
               letterSpacing: '0.02em',
+              whiteSpace: 'nowrap', // 防止 "3D 点云" 被换行
               transition:
                 'color var(--duration-fast) var(--ease-out), font-weight var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out)',
               transform: isActive ? 'scale(1.05)' : 'scale(1)',

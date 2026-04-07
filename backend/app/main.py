@@ -16,6 +16,22 @@
 from __future__ import annotations
 
 import logging
+import os
+
+# ── HuggingFace 镜像默认值 ─────────────────────────────────────
+#
+# 中国大陆访问 huggingface.co 通常不可达, 模型权重下载会失败.
+# hf-mirror.com 是国内公认的稳定 HF 镜像站, 所有 hub 调用 (download / api / lfs)
+# 都会自动重定向到镜像.
+#
+# 用 os.environ.setdefault 而不是直接赋值: 它**只在用户没有手动设置**时才生效.
+# 海外用户可以通过 export HF_ENDPOINT="https://huggingface.co" 覆盖回官方源,
+# 或者用任何其他自建镜像. 国内用户什么都不用做即可正常使用.
+#
+# 必须放在 import torch / transformers **之前** — 因为 huggingface_hub
+# 在 import 时就读取环境变量初始化 client. 这里是 main.py 顶部, FastAPI
+# 路由层尚未触发任何模型相关 import, 时机正确.
+os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError

@@ -112,12 +112,18 @@ describe('viewport layer — smoke', () => {
     m.unmount()
   })
 
-  it('EmptyState: 渲染底部 3 个快捷键提示 (Space / H / Esc)', async () => {
+  it('EmptyState: 不渲染键盘快捷键提示 (Space/HUD/Esc) — 防与 ModeBar 重叠回潮', async () => {
+    // 早期版本曾在 fixed bottom-10 渲染过 Space/H/Esc 三个 KeyHint pill,
+    // 但 bottom 40px 直接落在 ModeBar (bottom 0, height 80px) 内部, 与
+    // 模式标签视觉重叠. 修复后这些提示统一在 SettingsSheet 底部展示,
+    // EmptyState 不应再含这些字符. 反向断言防回潮.
     const m = await mount(createElement(EmptyState))
     const text = m.container.textContent ?? ''
-    expect(text).toContain('Space')
-    expect(text).toContain('H')
-    expect(text).toContain('Esc')
+    // 不能用 toContain('H') 因为 "或点击" 等中文文字里可能含 H 字符
+    // (实际上不含, 但保险起见用 word boundary)
+    expect(text).not.toContain('Space')
+    expect(text).not.toContain('Esc')
+    expect(text).not.toContain('HUD')
     m.unmount()
   })
 
@@ -173,6 +179,16 @@ describe('overlay layer — smoke', () => {
     // 'image' 是初始 mode, 对应标签是 "图片"
     const selected = m.container.querySelector('[aria-selected="true"]')
     expect(selected?.textContent).toContain('图片')
+    m.unmount()
+  })
+
+  it('ModeBar: tablist inline style gap 引用 var(--space-6) (DESIGN.md §8 = 24px)', async () => {
+    // 防回潮: 早期 className 用 gap-6 依赖 tailwind extend.spacing 解析,
+    // 改成 inline style 显式 var(--space-6) 后必须保持引用. 任何回退到
+    // tailwind class 都会让这个断言失败.
+    const m = await mount(createElement(ModeBar))
+    const tablist = m.container.querySelector('[role="tablist"]') as HTMLElement
+    expect(tablist.style.gap).toBe('var(--space-6)')
     m.unmount()
   })
 
