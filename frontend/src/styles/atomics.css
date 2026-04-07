@@ -1,0 +1,256 @@
+/* ============================================================================
+ * DepthLens — atomics.css
+ *
+ * 原子组件样式 (无法通过 Tailwind utility 表达的伪元素 / 跨浏览器规范化).
+ * 从 globals.css 拆出, 为了控制单文件 ≤ 300 行硬约束 (CLAUDE.md).
+ *
+ * 设计来源: Stitch 生成 → DESIGN.md §7 速查表 → 套 token
+ *
+ * 加载顺序: 在 main.tsx 里 globals.css 之后 import, 这样可以引用 globals.css
+ * 里定义的 :root CSS 变量 (--accent / --bg-tertiary / --space-* 等).
+ * ============================================================================ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 1. Slider — 受控 range input 样式化
+ *
+ * 用法 (见 components/ui/Slider.tsx):
+ *   <input type="range" class="depth-slider" style="--slider-fill: 62%">
+ *
+ * 关键技术:
+ * - input 自身 appearance: none, 隐藏默认控件
+ * - 用 webkit / moz 伪元素分别画 track + thumb (跨浏览器统一)
+ * - active fill 通过 CSS 自定义属性 --slider-fill (百分比) + linear-gradient
+ *   驱动, 由 React 在 onChange 时计算并通过 inline style 注入
+ * - 真正的 <input type="range"> 提供键盘 (←/→/Home/End/PageUp/PageDown) +
+ *   屏幕阅读器 + 表单提交支持, 不需要手写 ARIA 状态机
+ *
+ * 视觉关键: thumb 三层 box-shadow (外圈光环 + accent halo + 深度阴影).
+ * 来自 Stitch 生成 ("DepthLens Precision Slider").
+ * ───────────────────────────────────────────────────────────────────────── */
+.depth-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 16px; /* 加大 hit area, 视觉 track 仍然 4px */
+  background: transparent;
+  cursor: pointer;
+  outline: none;
+  /* --slider-fill 由 React 注入, 默认 0% 防止首帧闪烁 */
+  --slider-fill: 0%;
+}
+
+.depth-slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ── Webkit (Chrome / Edge / Safari) ────────────────────────────── */
+.depth-slider::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: var(--radius-full);
+  /* 双 stop 硬过渡 = 实心填充至 var(--slider-fill), 之后是 inactive 色 */
+  background: linear-gradient(
+    to right,
+    var(--accent) 0%,
+    var(--accent) var(--slider-fill),
+    var(--bg-tertiary) var(--slider-fill),
+    var(--bg-tertiary) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.depth-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px; /* 让 16px thumb 中心对齐 4px track */
+  background: #ffffff;
+  border-radius: 50%;
+  border: none;
+  /* 三层阴影: 外圈光环 → accent halo → 深度阴影 */
+  box-shadow:
+    0 0 0 4px rgba(59, 130, 246, 0.1),
+    0 0 20px rgba(59, 130, 246, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  transition: transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.depth-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.1);
+  box-shadow:
+    0 0 0 6px rgba(59, 130, 246, 0.12),
+    0 0 28px rgba(59, 130, 246, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.depth-slider:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+.depth-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 0 0 4px rgba(59, 130, 246, 0.1),
+    0 0 0 2px var(--accent),
+    0 0 28px rgba(59, 130, 246, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Firefox ────────────────────────────────────────────────────── */
+.depth-slider::-moz-range-track {
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.depth-slider::-moz-range-progress {
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.depth-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border-radius: 50%;
+  border: none;
+  box-shadow:
+    0 0 0 4px rgba(59, 130, 246, 0.1),
+    0 0 20px rgba(59, 130, 246, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.5);
+  transition: transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.depth-slider:hover::-moz-range-thumb {
+  transform: scale(1.1);
+}
+
+.depth-slider:active::-moz-range-thumb {
+  transform: scale(1.15);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 2. GlowButton — accent 渐变主操作按钮
+ *
+ * 视觉来源: Stitch ("Premium CTA Stage") + DESIGN.md §3.7 hover 增强.
+ *
+ * 多层 box-shadow 含义:
+ *   inset 0 1px 0 rgba(255,255,255,0.2)   ← 顶部光边 ("光来自上方")
+ *   0 1px 2px rgba(0,0,0,0.5)             ← 紧贴的深度阴影
+ *   0 4px 12px rgba(0,0,0,0.4)            ← 环境阴影
+ *   0 0 20px rgba(59,130,246,0.4)         ← accent halo
+ *   0 0 40px rgba(59,130,246,0.2)         ← accent 大范围 soft halo
+ *
+ * Hover: halo 扩大 (20→32 + 40→60), 整体上移 1px, 加深深度阴影
+ * Active: scale(0.97), 阴影收缩 (按下感)
+ * ───────────────────────────────────────────────────────────────────────── */
+.depth-glow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-5);
+  height: 44px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--accent), #2563eb);
+  color: #ffffff;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1;
+  cursor: pointer;
+  position: relative;
+  white-space: nowrap;
+  user-select: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(59, 130, 246, 0.4),
+    0 0 40px rgba(59, 130, 246, 0.2);
+  transition: transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.depth-glow-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 1px 2px rgba(0, 0, 0, 0.55),
+    0 6px 16px rgba(0, 0, 0, 0.5),
+    0 0 32px rgba(59, 130, 246, 0.55),
+    0 0 60px rgba(59, 130, 246, 0.3);
+}
+
+.depth-glow-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.depth-glow-btn:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 3px;
+}
+
+.depth-glow-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  filter: saturate(0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 3. GhostButton — 次级操作 (DESIGN.md §7.1)
+ * 透明背景 + 边框, hover 时升级亮度. 用于 Cancel / 次级操作.
+ * ───────────────────────────────────────────────────────────────────────── */
+.depth-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-5);
+  height: 44px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+
+.depth-ghost-btn:hover:not(:disabled) {
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.depth-ghost-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.depth-ghost-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.depth-ghost-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

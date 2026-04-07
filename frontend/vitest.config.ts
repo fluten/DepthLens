@@ -18,7 +18,10 @@ export default defineConfig({
     // happy-dom 不实现 ImageData, 在 setup 中 polyfill
     setupFiles: ['./src/lib/__tests__/setup.ts'],
 
-    include: ['src/**/*.test.ts'],
+    // 同时匹配 .test.ts (lib/services/stores/hooks 纯逻辑) 与
+    // .test.tsx (components 渲染测试). components 测试用 tsx 后缀
+    // 是为了允许在测试里直接写 JSX, 与 React 组件文件后缀对齐.
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
 
     // 不需要 DOM 的纯函数测试可以用 node env, 但全局用 happy-dom 更省心
     globals: false,

@@ -52,6 +52,9 @@
   --radius-lg: 16px;
   --radius-xl: 20px;
   --radius-full: 9999px;
+  /* DESIGN.md §2 玻璃分配表的 Toast 例外: 12px (介于 md 和 lg 之间).
+     做成 token 而非硬编码, 与 "严禁硬编码圆角" 约束一致. */
+  --radius-toast: 12px;
 
   /* ── 间距 (4px base) ─────────────── */
   --space-1: 4px;
@@ -258,3 +261,13 @@
     top: 100%;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 6. 原子组件样式 已拆出到 styles/atomics.css
+ *
+ * 拆分原因 (CLAUDE.md ≤ 300 行硬约束): globals.css 是设计 token + 玻璃 +
+ * 关键 keyframes 的"地基"; atomics.css 专门收纳 .depth-slider /
+ * .depth-glow-btn 等无法通过 Tailwind utility 表达的组件级样式. 两者都从
+ * main.tsx 加载, atomics.css 在 globals.css 之后, 可引用 globals 里的
+ * :root CSS 变量.
+ * ───────────────────────────────────────────────────────────────────────── */

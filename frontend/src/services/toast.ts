@@ -19,33 +19,23 @@
  */
 
 // ── 类型 ────────────────────────────────────────────────────────────────────
+//
+// 类型定义在 lib/toastTypes.ts (CLAUDE.md 分层规则: 任何上层 component 都
+// 可以向下 import lib/, 但不能 import services/). 我们这里 re-export 它们,
+// 让历史调用方 (用 `from '../services/toast'` 的) 不需要改 import 路径.
 
-export type ToastVariant = 'success' | 'info' | 'warning' | 'error'
-
-export interface ToastOptions {
-  /**
-   * 自动消失的毫秒数. 不传则用 variant 默认值:
-   * - error: undefined (sticky, 不自动消失)
-   * - 其他: 4000ms
-   * 显式传 ``undefined`` 也表示 sticky.
-   */
-  durationMs?: number
-}
-
-/** 一条具象的 toast 消息, 给订阅者消费 */
-export interface ToastMessage {
-  /** 唯一 ID, 由 service 自增分配 */
-  id: string
-  variant: ToastVariant
-  text: string
-  /** 解析后的最终超时. undefined = sticky */
-  durationMs: number | undefined
-  /** 创建时间戳 (ms since epoch), 给 UI 做排序 / 排队动效用 */
-  createdAt: number
-}
-
-/** 订阅回调签名 */
-export type ToastSubscriber = (message: ToastMessage) => void
+export type {
+  ToastVariant,
+  ToastOptions,
+  ToastMessage,
+  ToastSubscriber,
+} from '../lib/toastTypes'
+import type {
+  ToastMessage,
+  ToastOptions,
+  ToastSubscriber,
+  ToastVariant,
+} from '../lib/toastTypes'
 
 // ── ToastService ───────────────────────────────────────────────────────────
 
